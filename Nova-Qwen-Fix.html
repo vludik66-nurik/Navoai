@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e0919">
+  <title>Nova — ИИ-чат</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E✦%3C/text%3E%3C/svg%3E">
+  <style>
+    :root{--bg:#0e0919;--side:#130c24;--panel:#1a1230;--panel2:#221845;--line:#2e2354;--text:#ede8fb;--mute:#9a8fc0;--acc:#8b5cf6;--acc2:#a78bfa;--err:#f87171;--ok:#4ade80;color-scheme:dark}
+    *{box-sizing:border-box;margin:0}
+    html,body{height:100%;min-height:100%}
+    body{background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;overflow:hidden}
+    button,select,textarea,input{font:inherit;color:inherit}
+    button{cursor:pointer;background:none;border:0}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    :focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+    .app{display:flex;height:100dvh;min-height:0}
+    .side{width:270px;background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:12px;gap:8px;flex-shrink:0;transition:transform .2s;z-index:15}
+    .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 10px;font-weight:700;font-size:18px}
+    .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#a78bfa,#6d28d9);display:grid;place-items:center;font-size:16px;color:#fff;flex-shrink:0}
+    .btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:10px;text-align:left}
+    .btn:hover{background:var(--panel)}.btn.new{border:1px solid var(--line);background:var(--panel)}.btn.new:hover{background:var(--panel2)}
+    .list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;margin:6px -4px;padding:0 4px}
+    .item{display:flex;align-items:center;border-radius:10px;padding:0 4px 0 12px;color:var(--mute);min-width:0}
+    .item:hover,.item.on{background:var(--panel);color:var(--text)}
+    .item span{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:8px 0;cursor:pointer;font-size:14px}
+    .item button{color:var(--mute);padding:6px 8px;border-radius:8px;opacity:0}.item:hover button,.item.on button,.item button:focus-visible{opacity:1}.item button:hover{color:var(--err)}
+    .side-note{font-size:12px;color:var(--mute);padding:8px 10px 2px}
+    .main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
+    .top{display:flex;align-items:center;gap:8px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--line);background:var(--bg)}
+    .top .menu{display:none;padding:6px 10px;font-size:20px;border-radius:8px}
+    .model-pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 11px;font-size:13px;color:var(--acc2)}
+    .sp{flex:1}
+    .msgs{flex:1;min-height:0;overflow-y:auto;scroll-behavior:smooth;overscroll-behavior:contain}
+    .col{max-width:780px;margin:0 auto;padding:24px 18px 12px}
+    .hero{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 18px;gap:10px}
+    .hero .logo{width:56px;height:56px;font-size:28px;border-radius:16px;box-shadow:0 10px 40px #8b5cf655}
+    .hero h1{font-size:30px;font-weight:650;letter-spacing:-.02em}.hero p{color:var(--mute);max-width:470px}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px;max-width:650px}
+    .chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 14px;font-size:14px}.chip:hover{border-color:var(--acc);background:var(--panel2)}
+    .m{display:flex;margin:0 0 22px;min-width:0}.m.user{justify-content:flex-end}
+    .m.user .b{background:var(--panel2);border:1px solid var(--line);border-radius:18px 18px 4px 18px;padding:10px 16px;max-width:88%;white-space:pre-wrap;overflow-wrap:anywhere}
+    .m.bot{gap:12px;align-items:flex-start}.m.bot .logo{width:28px;height:28px;font-size:14px;margin-top:2px}.m.bot .w{min-width:0;flex:1;overflow-wrap:anywhere}
+    .who{font-size:13px;color:var(--mute);margin-bottom:2px}.b.md{overflow-wrap:anywhere}
+    .md>*:first-child{margin-top:0}.md>*:last-child{margin-bottom:0}
+    .md p,.md ul,.md ol,.md pre,.md blockquote,.md table{margin:.7em 0}.md ul,.md ol{padding-left:1.4em}.md li{margin:.2em 0}
+    .md h1,.md h2,.md h3{margin:1em 0 .4em;line-height:1.3}.md h1{font-size:1.4em}.md h2{font-size:1.2em}.md h3{font-size:1.05em}
+    .md a{color:var(--acc2);overflow-wrap:anywhere}.md code{background:var(--panel2);padding:.12em .4em;border-radius:6px;font:.9em ui-monospace,Consolas,monospace}
+    .md pre{background:#0a0614;border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow-x:auto;max-width:100%}.md pre code{background:none;padding:0}
+    .md blockquote{border-left:3px solid var(--acc);padding-left:12px;color:var(--mute)}.md table{border-collapse:collapse;display:block;overflow-x:auto;max-width:100%}
+    .md th,.md td{border:1px solid var(--line);padding:6px 10px}.md th{background:var(--panel)}
+    .err{color:var(--err);white-space:pre-wrap;overflow-wrap:anywhere}.act{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap}
+    .act button{color:var(--mute);font-size:13px;padding:4px 8px;border-radius:8px}.act button:hover{background:var(--panel);color:var(--text)}
+    .dots{display:inline-flex;gap:4px;padding:8px 0}.dots i{width:7px;height:7px;border-radius:50%;background:var(--acc2);animation:bl 1.2s infinite}.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+    @keyframes bl{0%,80%,100%{opacity:.25}40%{opacity:1}}
+    .comp{padding:8px 14px calc(14px + env(safe-area-inset-bottom))}.box{max-width:780px;margin:0 auto;display:flex;align-items:flex-end;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 18px}
+    .box:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px #8b5cf626}.box textarea{flex:1;min-width:0;background:none;border:0;resize:none;outline:0;max-height:200px;padding:7px 0;line-height:1.5}
+    textarea::placeholder{color:var(--mute)}.send{width:38px;height:38px;border-radius:50%;background:var(--acc);color:#fff;font-size:18px;flex-shrink:0;display:grid;place-items:center}.send:hover{background:#7c3aed}.send:disabled{background:var(--panel2);color:var(--mute)}
+    .hint{text-align:center;color:var(--mute);font-size:12px;margin-top:8px}
+    .ov{position:fixed;inset:0;background:#05020ccc;display:none;align-items:center;justify-content:center;padding:16px;z-index:20}.ov.on{display:flex}
+    .dlg{background:var(--side);border:1px solid var(--line);border-radius:18px;width:100%;max-width:540px;max-height:92dvh;overflow-y:auto;padding:22px;box-shadow:0 24px 90px #0008}
+    .dlg h2{font-size:20px;margin-bottom:4px}.sub{color:var(--mute);font-size:14px;margin-bottom:16px}.dlg label{display:block;font-size:14px;margin:14px 0 5px;font-weight:600}
+    .dlg input,.dlg textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}.dlg textarea{min-height:110px;resize:vertical;max-height:240px}
+    .dlg input:focus,.dlg textarea:focus{outline:0;border-color:var(--acc)}.row{display:flex;gap:8px;justify-content:space-between;margin-top:20px;flex-wrap:wrap;align-items:center}
+    .pri{background:var(--acc);color:#fff;border-radius:10px;padding:9px 20px;font-weight:600}.pri:hover{background:#7c3aed}.sec{border:1px solid var(--line);border-radius:10px;padding:9px 16px}.sec:hover{background:var(--panel)}
+    .dng{color:var(--err)}.notice{font-size:13px;min-height:20px;margin-top:10px;color:var(--mute);white-space:pre-wrap}.notice.bad{color:var(--err)}.notice.good{color:var(--ok)}
+    .key-state{padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:13px;color:var(--mute);margin:12px 0}
+    .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--acc);padding:9px 16px;border-radius:12px;font-size:14px;z-index:30;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100vw - 28px);text-align:center}.toast.on{opacity:1}
+    .scrim{display:none}[hidden]{display:none!important}
+    @media(max-width:820px){.side{position:fixed;inset:0 auto 0 0;transform:translateX(-100%);padding-top:max(12px,env(safe-area-inset-top))}.side.open{transform:none}.scrim.open{display:block;position:fixed;inset:0;background:#05020c99;z-index:14}.top .menu{display:block}.hero h1{font-size:25px}}
+    @media(max-width:480px){.top{padding-left:8px;padding-right:8px}.comp{padding-left:8px;padding-right:8px}.dlg{padding:18px}.m.user .b{max-width:94%}}
+    @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="brand"><div class="logo">✦</div>Nova</div>
+    <button class="btn new" id="newBtn" type="button">＋ Новый чат</button>
+    <div class="list" id="list" aria-label="История чатов"></div>
+    <div class="side-note">Qwen 3.6 через OpenRouter · может быть платной</div>
+    <button class="btn" id="adminBtn" type="button">⚙ Админ-панель</button>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+  <main class="main">
+    <header class="top">
+      <button class="menu" id="menu" type="button" aria-label="Меню">☰</button>
+      <span class="model-pill">Qwen 3.6 · OpenRouter</span>
+      <span class="sp"></span>
+      <button class="sec" id="clearChats" type="button" title="Удалить всю историю">Очистить чаты</button>
+    </header>
+    <section class="msgs" id="msgs" aria-live="polite"></section>
+    <footer class="comp">
+      <div class="box">
+        <textarea id="inp" rows="1" placeholder="Напиши сообщение Nova…" aria-label="Сообщение"></textarea>
+        <button class="send" id="send" type="button" aria-label="Отправить">↑</button>
+      </div>
+      <div class="hint">Enter — отправить, Shift+Enter — новая строка. Nova может ошибаться, важное проверяй.</div>
+    </footer>
+  </main>
+</div>
+
+<div class="ov" id="adminOv" aria-hidden="true">
+  <section class="dlg" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <h2 id="adminTitle">Админ-панель Nova</h2>
+    <p class="sub">Вход по паролю Fgg. Это визуальная блокировка панели, а не настоящая защита: пароль можно найти в исходном HTML.</p>
+    <form id="loginForm">
+      <label for="adminPassword">Пароль администратора</label>
+      <input id="adminPassword" type="password" autocomplete="current-password" maxlength="100" required placeholder="Введите пароль администратора">
+      <div class="row"><button class="sec" id="closeAdminLogin" type="button">Закрыть</button><button class="pri" id="loginBtn" type="submit">Войти</button></div>
+      <div class="notice" id="loginNotice" role="status"></div>
+    </form>
+    <form id="configForm" hidden>
+      <div class="key-state" id="keyState"></div>
+      <label for="apiKey">OpenRouter API-ключ</label>
+      <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-…">
+      <p class="sub" style="margin-top:6px">Ключ сохраняется только в этом браузере. Не вставляй его на чужом устройстве. Внимание: выбранная Qwen 3.6 35B A3B не бесплатная — OpenRouter списывает оплату по тарифу провайдера.</p>
+      <label for="systemPrompt">Системная инструкция Nova</label>
+      <textarea id="systemPrompt" maxlength="5000"></textarea>
+      <div class="row">
+        <button class="sec" id="testKey" type="button">Проверить API-ключ</button>
+        <button class="sec dng" id="deleteKey" type="button">Удалить ключ</button>
+        <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="sec" id="logoutBtn" type="button">Выйти</button><button class="pri" id="saveConfig" type="submit">Сохранить</button></span>
+      </div>
+      <div class="notice" id="configNotice" role="status"></div>
+    </form>
+  </section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script>
+"use strict";
+
+// Для одного общего ключа можно вписать его сюда. ВАЖНО: тогда каждый посетитель
+// сможет увидеть этот ключ в исходном HTML и использовать его. Оставь пустым,
+// если каждый пользователь будет вводить собственный ключ в админ-панели.
+const SHARED_PUBLIC_API_KEY = "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";
+
+// Только визуальный пароль. Он не защищает API-ключ от просмотра в исходном коде.
+const ADMIN_PASSWORD = "Fgg";
+const API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL = "qwen/qwen3.6-35b-a3b";
+const KEY_CHECK_URL = "https://openrouter.ai/api/v1/key";
+const DEFAULT_PROMPT = "Ты — Nova, полезный и точный ИИ-помощник. Отвечай на языке пользователя, понятно и по делу. Не выдумывай факты: если не уверен, прямо скажи об этом. При необходимости объясняй сложное простыми словами.";
+const STORAGE = "nova.static.qwen.v1";
+const $ = selector => document.querySelector(selector);
+let state = { chats: [], currentId: null, prompt: DEFAULT_PROMPT };
+let busy = false;
+let controller = null;
+let toastTimer = null;
+
+function readSavedState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE) || "{}");
+    if (saved && typeof saved === "object") {
+      state.chats = Array.isArray(saved.chats) ? saved.chats.filter(c => c && typeof c.id === "string" && Array.isArray(c.messages)) : [];
+      state.currentId = typeof saved.currentId === "string" ? saved.currentId : null;
+      state.prompt = typeof saved.prompt === "string" && saved.prompt.trim() ? saved.prompt : DEFAULT_PROMPT;
+    }
+  } catch (error) {
+    console.warn("Не удалось прочитать историю Nova:", error);
+  }
+}
+function saveState() {
+  try {
+    // Ограничиваем объём истории, чтобы localStorage не переполнялся.
+    state.chats = state.chats.slice(-40);
+    localStorage.setItem(STORAGE, JSON.stringify(state));
+  } catch (error) {
+    toast("Не удалось сохранить историю. Возможно, память браузера заполнена.");
+  }
+}
+function getApiKey() {
+  try { return (localStorage.getItem("nova.openrouter.key") || SHARED_PUBLIC_API_KEY || "").trim(); }
+  catch { return SHARED_PUBLIC_API_KEY.trim(); }
+}
+function setApiKey(value) {
+  try {
+    if (value) localStorage.setItem("nova.openrouter.key", value.trim());
+    else localStorage.removeItem("nova.openrouter.key");
+    return true;
+  } catch {
+    toast("Браузер запретил сохранение ключа. Разреши localStorage для сайта.");
+    return false;
+  }
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function currentChat() { return state.chats.find(chat => chat.id === state.currentId) || null; }
+function toast(message) {
+  const node = $("#toast");
+  node.textContent = message;
+  node.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => node.classList.remove("on"), 3000);
+}
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+}
+function renderMarkdown(value) {
+  const text = String(value || "").replace(/<think>[\s\S]*?(<\/think>|$)/g, "").trim();
+  if (window.marked && window.DOMPurify) {
+    try {
+      const html = window.marked.parse(text, { breaks: true, gfm: true });
+      return window.DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+    } catch (error) { console.warn("Markdown render error:", error); }
+  }
+  return escapeHtml(text).replace(/\n/g, "<br>");
+}
+function createBotNode(message) {
+  const row = document.createElement("div");
+  row.className = "m bot";
+  const logo = document.createElement("div");
+  logo.className = "logo";
+  logo.textContent = "✦";
+  const wrapper = document.createElement("div");
+  wrapper.className = "w";
+  const who = document.createElement("div");
+  who.className = "who";
+  who.textContent = `Nova · ${message.model || MODEL}`;
+  const body = document.createElement("div");
+  body.className = message.err ? "b err" : "b md";
+  wrapper.append(who, body);
+  row.append(logo, wrapper);
+  paintBot(row, message, false);
+  return row;
+}
+function paintBot(row, message, streaming) {
+  const body = row.querySelector(".b");
+  const wrapper = row.querySelector(".w");
+  if (!body || !wrapper) return;
+  wrapper.querySelector(".act")?.remove();
+  if (message.err) {
+    body.className = "b err";
+    body.textContent = message.content;
+  } else if (!message.content) {
+    body.className = "b md";
+    body.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>';
+  } else {
+    body.className = "b md";
+    body.innerHTML = renderMarkdown(message.content);
+  }
+  if (!streaming && message.content && !message.err) {
+    const actions = document.createElement("div");
+    actions.className = "act";
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.textContent = "Копировать";
+    copy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(message.content.trim());
+        toast("Скопировано");
+      } catch { toast("Не удалось скопировать. Выдели текст вручную."); }
+    });
+    actions.append(copy);
+    wrapper.append(actions);
+  }
+}
+function renderList() {
+  const list = $("#list");
+  list.replaceChildren();
+  [...state.chats].sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0)).forEach(chat => {
+    const item = document.createElement("div");
+    item.className = "item" + (chat.id === state.currentId ? " on" : "");
+    const title = document.createElement("span");
+    title.textContent = chat.title || "Новый чат";
+    title.title = title.textContent;
+    title.addEventListener("click", () => {
+      if (busy) return;
+      state.currentId = chat.id;
+      saveState(); renderList(); renderMessages(); closeSide();
+    });
+    const remove = document.createElement("button");
+    remove.type = "button"; remove.textContent = "✕"; remove.title = "Удалить чат"; remove.setAttribute("aria-label", "Удалить чат");
+    remove.addEventListener("click", () => {
+      if (busy) return;
+      state.chats = state.chats.filter(entry => entry.id !== chat.id);
+      if (state.currentId === chat.id) state.currentId = null;
+      saveState(); renderList(); renderMessages();
+    });
+    item.append(title, remove); list.append(item);
+  });
+}
+function renderMessages() {
+  const box = $("#msgs");
+  box.replaceChildren();
+  const chat = currentChat();
+  if (!chat || !chat.messages.length) {
+    const hero = document.createElement("div");
+    hero.className = "hero";
+    hero.innerHTML = '<div class="logo">✦</div><h1>Чем могу помочь?</h1><p>Я Nova. Работаю на Qwen 3.6 и стараюсь отвечать точно и понятно.</p><div class="chips"></div>';
+    const examples = ["Объясни простыми словами, как работает блокчейн", "Помоги составить план изучения английского", "Напиши функцию на Python для поиска простых чисел", "Придумай 5 идей для пет-проекта"];
+    examples.forEach(text => {
+      const button = document.createElement("button");
+      button.className = "chip"; button.type = "button"; button.textContent = text;
+      button.addEventListener("click", () => { $("#inp").value = text; sendMessage(); });
+      hero.querySelector(".chips").append(button);
+    });
+    box.append(hero);
+    return;
+  }
+  const column = document.createElement("div");
+  column.className = "col";
+  chat.messages.forEach(message => {
+    if (message.role === "user") {
+      const row = document.createElement("div"); row.className = "m user";
+      const body = document.createElement("div"); body.className = "b"; body.textContent = message.content;
+      row.append(body); column.append(row);
+    } else if (message.role === "assistant") {
+      column.append(createBotNode(message));
+    }
+  });
+  box.append(column);
+  box.scrollTop = box.scrollHeight;
+}
+function setBusy(value) {
+  busy = value;
+  const button = $("#send");
+  button.textContent = value ? "■" : "↑";
+  button.setAttribute("aria-label", value ? "Остановить генерацию" : "Отправить");
+}
+function formatApiError(status, raw) {
+  let detail = String(raw || "Неизвестная ошибка");
+  let code = "";
+  let metadata = null;
+  try {
+    const json = JSON.parse(raw || "{}");
+    const err = json?.error;
+    if (typeof err === "string") detail = err;
+    else if (err && typeof err === "object") {
+      detail = err.message || err.code || detail;
+      code = String(err.code || "");
+      metadata = err.metadata || null;
+    } else detail = json?.message || detail;
+  } catch {
+    if (/UnsupportedHttpVerb|<\?xml|<Error>/i.test(raw || "")) {
+      return "Получен XML UnsupportedHttpVerb вместо ответа OpenRouter. Проверь адрес запроса: https://openrouter.ai/api/v1/chat/completions. Не используй адрес GitHub Pages или старый /api/chat.";
+    }
+  }
+  const extra = metadata?.raw ? `\nПодробности провайдера: ${String(metadata.raw).slice(0, 350)}` : "";
+  if (status === 400) return `OpenRouter отклонил параметры запроса: ${String(detail).slice(0, 400)}${extra}`;
+  if (status === 401) return "OpenRouter не принял API-ключ (401). Открой админ-панель, проверь ключ и создай новый в OpenRouter, если этот отключён.";
+  if (status === 402) return `Недостаточно средств или достигнут лимит расходов OpenRouter (402). Проверь баланс и лимит API-ключа.\n${String(detail).slice(0, 250)}`;
+  if (status === 403) return `OpenRouter запретил запрос (403). Проверь ограничения ключа, аккаунта или провайдера.\n${String(detail).slice(0, 250)}${extra}`;
+  if (status === 404) {
+    return `OpenRouter не нашёл доступный сервер для модели ${MODEL} (404). Модель в каталоге есть, но провайдеры могут быть временно недоступны или ограничены настройками аккаунта.\n${String(detail).slice(0, 300)}${extra}`;
+  }
+  if (status === 408 || status === 504) return "Провайдер Qwen не успел ответить. Повтори запрос чуть позже.";
+  if (status === 429) return `Слишком много запросов или сработал лимит OpenRouter (429). Подожди и попробуй снова.\n${String(detail).slice(0, 250)}`;
+  if (status >= 500) return `Сервис OpenRouter или провайдер Qwen временно недоступен (${status}). Попробуй позже.\n${String(detail).slice(0, 250)}${extra}`;
+  return `Ошибка OpenRouter (${status}${code ? ` · ${code}` : ""}): ${String(detail).slice(0, 450)}${extra}`;
+}
+async function readSSE(response, onText, signal) {
+  if (!response.body) throw new Error("Браузер не получил поток ответа от OpenRouter.");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finished = false;
+  const processLine = line => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) return;
+    const payload = trimmed.slice(5).trim();
+    if (!payload) return;
+    if (payload === "[DONE]") { finished = true; return; }
+    let item;
+    try { item = JSON.parse(payload); }
+    catch { return; }
+    if (item.error) throw new Error(item.error.message || "Ошибка модели Qwen.");
+    const delta = item?.choices?.[0]?.delta?.content;
+    if (typeof delta === "string" && delta) onText(delta);
+    else if (Array.isArray(delta)) {
+      for (const part of delta) if (typeof part?.text === "string") onText(part.text);
+    }
+  };
+  while (!finished) {
+    if (signal.aborted) throw new DOMException("Запрос остановлен", "AbortError");
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() || "";
+    for (const line of lines) processLine(line);
+  }
+  buffer += decoder.decode();
+  if (buffer.trim()) processLine(buffer);
+  try { await reader.cancel(); } catch {}
+}
+async function sendMessage() {
+  if (busy) { controller?.abort(); return; }
+  const input = $("#inp");
+  const text = input.value.trim();
+  if (!text) return;
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    openAdmin();
+    toast("Сначала добавь OpenRouter API-ключ в админ-панели этого браузера.");
+    return;
+  }
+  let chat = currentChat();
+  if (!chat) {
+    chat = { id: uid(), title: text.slice(0, 42), updatedAt: Date.now(), messages: [] };
+    state.chats.push(chat); state.currentId = chat.id;
+  }
+  chat.messages.push({ role: "user", content: text });
+  const bot = { role: "assistant", content: "", model: MODEL };
+  chat.messages.push(bot);
+  chat.updatedAt = Date.now();
+  input.value = ""; input.style.height = "auto";
+  saveState(); renderList(); renderMessages();
+  const messageHistory = chat.messages.slice(0, -1).filter(message =>
+    (message.role === "user" || message.role === "assistant") && typeof message.content === "string" && !message.err
+  ).slice(-20).map(message => ({ role: message.role, content: message.content }));
+  const total = messageHistory.reduce((sum, message) => sum + message.content.length, 0);
+  if (total > 45000) {
+    while (messageHistory.length > 2 && messageHistory.reduce((sum, message) => sum + message.content.length, 0) > 45000) messageHistory.shift();
+    if (messageHistory[0]?.role === "assistant") messageHistory.shift();
+  }
+  controller = new AbortController();
+  setBusy(true);
+  const box = $("#msgs");
+  const row = box.querySelector(".m.bot:last-child");
+  let frame = 0;
+  const draw = () => {
+    frame = 0;
+    if (row?.isConnected) {
+      const body = row.querySelector(".b");
+      if (body) body.innerHTML = bot.content ? renderMarkdown(bot.content) : '<span class="dots"><i></i><i></i><i></i></span>';
+      box.scrollTop = box.scrollHeight;
+    }
+  };
+  try {
+    const headers = {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "Accept": "text/event-stream"
+    };
+    if (location.origin && location.origin !== "null") headers["HTTP-Referer"] = location.origin;
+    headers["X-Title"] = "Nova";
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: "system", content: state.prompt || DEFAULT_PROMPT }, ...messageHistory],
+        stream: true,
+        temperature: 0.65,
+        max_tokens: 1400,
+        provider: { sort: "price", allow_fallbacks: true }
+      }),
+      signal: controller.signal,
+      cache: "no-store"
+    });
+    if (!response.ok) {
+      const raw = await response.text().catch(() => "");
+      throw new Error(formatApiError(response.status, raw));
+    }
+    await readSSE(response, chunk => {
+      bot.content += chunk;
+      if (!frame) frame = requestAnimationFrame(draw);
+    }, controller.signal);
+    if (!bot.content.replace(/<think>[\s\S]*?(<\/think>|$)/g, "").trim()) {
+      bot.err = true;
+      bot.content = "Qwen вернул пустой ответ. Попробуй отправить запрос ещё раз.";
+    }
+  } catch (error) {
+    if (error.name === "AbortError") {
+      if (!bot.content) chat.messages.pop();
+    } else {
+      bot.err = true;
+      bot.content = error instanceof TypeError
+        ? "Не удалось подключиться к OpenRouter. Проверь интернет, доступность OpenRouter и не блокирует ли запрос браузер."
+        : (error.message || "Произошла неизвестная ошибка.");
+    }
+  } finally {
+    if (frame) cancelAnimationFrame(frame);
+    controller = null;
+    setBusy(false);
+    chat.updatedAt = Date.now();
+    saveState(); renderMessages(); renderList();
+    box.scrollTop = box.scrollHeight;
+  }
+}
+function openNewChat() {
+  if (busy) return;
+  state.currentId = null;
+  saveState(); renderList(); renderMessages(); closeSide(); $("#inp").focus();
+}
+function closeSide() { $("#side").classList.remove("open"); $("#scrim").classList.remove("open"); }
+function setNotice(selector, message, kind = "") {
+  const node = $(selector); node.textContent = message; node.className = `notice${kind ? ` ${kind}` : ""}`;
+}
+function showLogin() {
+  $("#loginForm").hidden = false;
+  $("#configForm").hidden = true;
+  $("#adminPassword").value = "";
+  setNotice("#loginNotice", "");
+  setNotice("#configNotice", "");
+}
+function openAdmin() {
+  $("#adminOv").classList.add("on");
+  $("#adminOv").setAttribute("aria-hidden", "false");
+  closeSide(); showLogin(); $("#adminPassword").focus();
+}
+function closeAdmin() { $("#adminOv").classList.remove("on"); $("#adminOv").setAttribute("aria-hidden", "true"); }
+function showAdminConfig() {
+  $("#loginForm").hidden = true;
+  $("#configForm").hidden = false;
+  $("#apiKey").value = "";
+  $("#systemPrompt").value = state.prompt || DEFAULT_PROMPT;
+  const hasKey = Boolean(getApiKey());
+  $("#keyState").textContent = hasKey
+    ? (SHARED_PUBLIC_API_KEY ? "✓ Ключ доступен. В этом браузере можно сохранить локальную замену." : "✓ API-ключ сохранён в этом браузере.")
+    : "⚠ API-ключ не задан. Добавь свой ключ OpenRouter ниже.";
+  $("#keyState").style.color = hasKey ? "var(--ok)" : "var(--mute)";
+}
+
+async function checkApiKey() {
+  const button = $("#testKey");
+  const candidate = $("#apiKey").value.trim() || getApiKey();
+  if (!candidate) {
+    setNotice("#configNotice", "Сначала вставь API-ключ OpenRouter.", "bad");
+    return;
+  }
+  if (!/^sk-or-v1-[A-Za-z0-9_-]{20,}$/.test(candidate)) {
+    setNotice("#configNotice", "Формат ключа выглядит неверно. Обычно OpenRouter API-ключ начинается с sk-or-v1-.", "bad");
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Проверяю…";
+  setNotice("#configNotice", "Проверяю ключ на OpenRouter…");
+  try {
+    const response = await fetch(KEY_CHECK_URL, {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${candidate}`, "Accept": "application/json" },
+      cache: "no-store"
+    });
+    const raw = await response.text();
+    if (!response.ok) {
+      let details = raw;
+      try { const parsed = JSON.parse(raw); details = parsed?.error?.message || parsed?.message || raw; } catch {}
+      if (response.status === 401 || response.status === 403) throw new Error("OpenRouter не принял этот ключ. Проверь его или создай новый.");
+      throw new Error(`Не удалось проверить ключ (${response.status}): ${String(details).slice(0, 250)}`);
+    }
+    let payload = {};
+    try { payload = JSON.parse(raw); } catch {}
+    const data = payload?.data || {};
+    const remaining = Number(data.limit_remaining);
+    const quota = Number.isFinite(remaining) ? ` Остаток установленного лимита: $${remaining.toFixed(2)}.` : "";
+    const account = data.is_free_tier === true ? " Ключ относится к бесплатному тарифу OpenRouter." : "";
+    setNotice("#configNotice", `✓ API-ключ действителен. OpenRouter его принял.${account}${quota}\nТеперь можно сохранить ключ и отправить сообщение Nova.`, "good");
+  } catch (error) {
+    const message = error instanceof TypeError
+      ? "Не удалось проверить ключ из браузера. Проверь интернет и попробуй ещё раз; запрос может блокироваться расширением браузера."
+      : (error.message || "Ошибка проверки ключа.");
+    setNotice("#configNotice", message, "bad");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Проверить API-ключ";
+  }
+}
+
+$("#menu").addEventListener("click", () => { $("#side").classList.add("open"); $("#scrim").classList.add("open"); });
+$("#scrim").addEventListener("click", closeSide);
+$("#newBtn").addEventListener("click", openNewChat);
+$("#adminBtn").addEventListener("click", openAdmin);
+$("#testKey").addEventListener("click", checkApiKey);
+$("#send").addEventListener("click", sendMessage);
+$("#clearChats").addEventListener("click", () => {
+  if (busy) return;
+  if (!confirm("Удалить всю историю чатов в этом браузере?")) return;
+  state.chats = []; state.currentId = null; saveState(); renderList(); renderMessages(); toast("История удалена");
+});
+$("#adminOv").addEventListener("click", event => { if (event.target.id === "adminOv") closeAdmin(); });
+$("#closeAdminLogin").addEventListener("click", closeAdmin);
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") closeAdmin();
+  if (event.key === "Enter" && event.target === $("#inp") && !event.shiftKey && !event.isComposing) { event.preventDefault(); sendMessage(); }
+});
+$("#loginForm").addEventListener("submit", event => {
+  event.preventDefault();
+  if ($("#adminPassword").value !== ADMIN_PASSWORD) {
+    setNotice("#loginNotice", "Неверный пароль.", "bad");
+    $("#adminPassword").select();
+    return;
+  }
+  showAdminConfig();
+  setNotice("#configNotice", "Вы вошли в админ-панель.", "good");
+});
+$("#configForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const newKey = $("#apiKey").value.trim();
+  if (newKey && !/^sk-or-v1-[A-Za-z0-9_-]{20,}$/.test(newKey)) {
+    setNotice("#configNotice", "Похоже, ключ OpenRouter введён неправильно. Обычно он начинается с sk-or-v1-.", "bad");
+    return;
+  }
+  if (newKey && !setApiKey(newKey)) return;
+  state.prompt = $("#systemPrompt").value.trim() || DEFAULT_PROMPT;
+  saveState();
+  $("#apiKey").value = "";
+  showAdminConfig();
+  setNotice("#configNotice", "Настройки сохранены в этом браузере.", "good");
+});
+$("#deleteKey").addEventListener("click", () => {
+  if (!confirm("Удалить API-ключ из этого браузера?")) return;
+  setApiKey(""); showAdminConfig(); setNotice("#configNotice", "Локальный ключ удалён.", "good");
+});
+$("#logoutBtn").addEventListener("click", () => { showLogin(); closeAdmin(); toast("Вы вышли из админ-панели."); });
+const input = $("#inp");
+input.addEventListener("input", () => { input.style.height = "auto"; input.style.height = `${Math.min(input.scrollHeight, 200)}px`; });
+
+readSavedState();
+renderList();
+renderMessages();
+</script>
+</body>
+</html>
